@@ -1,0 +1,180 @@
+// Version 1.2 Wed Jan 31 10:34:50 2001 Elam, Ravel, Sieber NIST
+// File format of flat text file:
+//	Comments are preceeded by two forward slashes.
+//	Keywords are at the beginning of each line, followed by data values
+//	Keywords begin with a capital letter.
+//	The keywords are: Version, Element, Edge, Lines, CK, CKtotal, Photo, Scatter, EndElement, End
+//	The values following each keyword are:
+//	Version version_number date time
+//	Element symbol atomic_number atomic_weight density(gm/cm3)
+//	Edge symbol energy fluorescence_yield jump_ratio
+//	Lines symbolIUPAC symbolSiegbahn energy intensity
+//	CK symbol Coster_Kronig_transition_probability
+//		The symbol/value pairs are repeated for each allowed CK transtion from the edge
+//	CKtotal symbol total_Coster_Kronig_transition_probability
+//		This value includes transitions via any possible intermediate states
+//	Photo energy photo_absorption_log_value photo_absorption_spline
+//	Scatter energy coherent_scatter_log_value coherent_scatter_spline incoherent_scatter_log_value incoherent_scatter_spline
+//	EndElement this marks the end of values for this element
+//	End this marks the end of all data in the file
+//  All energies are in electron volts.
+//	Note: additonal keywords and/or additional values after the existing values for any keyword
+//		may be added by the authors in future versions, for example to add core hole lifetimes.
+//
+//	The literature references and explanation of the values are given below:
+//
+//  Densities are theoretical solid densities for all elements, regardless of state at STP
+//
+//	K-shell fluorescence yield below Z=11 from new fits in J. H. Hubbell et. al., 
+//		J. Chem. Phys. Ref. Data, Vol. 23, No. 2, 1994, pp339-364.
+//	Fluorescence yields and Coster-Kronig transition rates for K and L shells
+//	Krause, J. Phys. Chem. Ref. Data, Vol. 8, No. 2, 1979, pp307-327.
+//	values for wK, wL2,and f23 are from Table 1. (values for light atoms in condensed matter)
+//	(note that this produces a large step in f23 values at z=30, see discussion in reference
+//	section 5.3 L2 Subshell and section 7 last paragraph)
+//
+//	Values of wL1 for Z=85-110 and f12 for Z=72-96 from Krause were modified as suggested by 
+//	W. Jitschin, "Progress in Measurements of L-Subshell Fluorescence, Coster-Kronig, 
+//	and Auger Values", AIP Conference Proceedings 215, X-ray and Inner-Shell Processes, 
+//	Knoxville, TN, 1990. T. A. Carlson, M. O. Krause, and S. T. Manson, Eds. 
+//	(American Institute of Physics, 1990).
+//
+//	Fluorescence yields and Coster-Kronig transition rates for M shells
+//	Eugene J. McGuire, "Atomic M-Shell Coster-Kronig, Auger, and Radiative Rates, and Fluorescence 
+//	Yields for Ca-Th", Physical Review A, Vol. 5, No. 3, March 1972, pp1043-1047.
+//
+//	Fluorescence yields and Coster-Kronig transition rates for N shells
+//	Eugene J. McGuire, "Atomic N-shell Coster-Kronig, Auger, and Radiative Rates and Fluorescence 
+//	Yields for 38 <= Z <= 103", Physical Review A 9, No. 5, May 1974, pp1840-1851.
+//		Values for Z=38 to 50 were adjusted according to instructions on 
+//		page 1845, at the end of Section IV.a., and the last sentence of the conclusions.
+//
+//	Relative emission rates, fits to low-order polynomials, low-Z extrapolations by hand and eye
+//	data from Salem, Panossian, and Krause, Atomic Data and Nuclear Data Tables Vol. 14 No.2 August 1974, pp92-109.
+//	M shell data is from T. P. Schreiber and A. M. Wims, X-ray Spectrometry Vol. 11, No. 2, 1982, pp42-45.
+//  Small, arbitrary intensities assigned to Mgamma and Mzeta lines.
+//
+//  Cross sections are in cm2/gm vs energy in eV.  Berger and Hubbell above 1 keV, Plechaty et. al. below.
+//      (values are logarithms and become cm2/gm and eV when exponentiated)
+//
+//  Cross sections below about 250 eV should not be considered reliable.
+//
+//	Reference: M. J. Berger and J. H. Hubbell, "XCOM: Photon Cross Sections on a Personal Computer", 
+//		Publication NBSIR 87-3597, National Bureau of Standards, Gaithersburg, MD, 1987.
+//	Machine-readable data from J. H. Hubbell, personal communication, Nov. 9, 1998.  The data 
+//		were updated as of May 7, 1998 (XCOM Version 2.1).
+//
+//	Reference: Plechaty, E. F., Cullen, D. E., and Howerton,R.J, "Tables and Graphs of
+//		Photon Interaction Cross Sections from 0.1 keV to 100 MeV Derived from the 
+//		LLL Evaluated Nuclear Data Library," Report UCRL-50400, Vol. 6, Rev. 3, NTIS DE82-004819,
+//		Lawrence Livermore National Laboratory, Livermore, CA. (1981).
+//	Machine-readable data from D. B. Brown, Naval Research Laboratory.
+//
+// use spline interpolation of log values via Numerical Recipes spline evaluation routine SPLINT
+//  W. H. Press, B. P. Flannery, S. A. Teukolsky, and W. T. Vetterling, "Numerical Recipes" 
+//     (Cambridge Univ. Press, Cambridge, 1986), ISBN 0 521 30811 9.  Later versions including "Numerical 
+//     Recipes in C" have a functionally identical routine.
+// third number in tables is second derivative of spline function, used by SPLINT to regenerate spline
+//
+//	all jump ratios are calculated by taking x-ray absorption cross section values 
+//		1 eV above edge divided by value 1 eV below edge
+//		absorption cross section values are from current database, 
+//  values are averaged where values had little or no Z dependence
+//  fits to 1/Z are used where R value of fit is greater than 0.86
+//
+//  Version history:
+//     Version 1.0 - first complete database
+//     Version 1.1 - first (limited) public release
+//        corrected log of cross-sections, incorporated edge jumps from cross-section table
+//     Version 1.2 - first public distrubution
+//        intensities of Ll (L3-M1) corrected (were about 10x too low)
+//        corrected problem which caused omission of some lines
+//
+
+Element H  1  1.00790  0.07100
+Edge  K 13.60000 0.00000 1.00000
+Photo
+    4.60517e+00  9.33806e+00  0.00000e+00
+    4.82831e+00  8.64615e+00  0.00000e+00
+    5.01064e+00  8.07357e+00  0.00000e+00
+    5.16479e+00  7.59138e+00  0.00000e+00
+    5.29832e+00  7.16641e+00  0.00000e+00
+    5.52146e+00  6.44561e+00  0.00000e+00
+    5.70378e+00  5.87377e+00  0.00000e+00
+    5.85793e+00  5.36460e+00  0.00000e+00
+    5.99146e+00  4.91694e+00  0.00000e+00
+    6.10925e+00  4.55160e+00  0.00000e+00
+    6.21461e+00  4.19759e+00  0.00000e+00
+    6.30992e+00  3.86711e+00  0.00000e+00
+    6.39693e+00  3.58924e+00  0.00000e+00
+    6.47697e+00  3.35998e+00  0.00000e+00
+    6.55108e+00  3.11565e+00  0.00000e+00
+    6.68461e+00  2.63145e+00  0.00000e+00
+    6.90776e+00  1.91948e+00  0.00000e+00
+    6.90776e+00  1.91948e+00  0.00000e+00
+    7.31322e+00  5.60673e-01  -8.17066e-02
+    7.60090e+00  -4.09751e-01  -6.56671e-02
+    8.00637e+00  -1.78584e+00  -2.22203e-02
+    8.29405e+00  -2.76595e+00  -7.37121e-02
+    8.51719e+00  -3.52952e+00  -3.47030e-02
+    8.69951e+00  -4.15434e+00  7.45202e-02
+    8.98720e+00  -5.13875e+00  -1.14091e-01
+    9.21034e+00  -5.90588e+00  -2.75082e-03
+    9.61581e+00  -7.30232e+00  -2.05458e-02
+    9.90349e+00  -8.29456e+00  -2.58864e-03
+    1.03090e+01  -9.69385e+00  -5.87612e-03
+    1.05966e+01  -1.06869e+01  1.49784e-02
+    1.08198e+01  -1.14564e+01  3.25111e-02
+    1.10021e+01  -1.20840e+01  4.18558e-02
+    1.12898e+01  -1.30712e+01  6.18209e-02
+    1.15129e+01  -1.38334e+01  9.40327e-02
+    1.19184e+01  -1.52038e+01  2.05927e-01
+    1.22061e+01  -1.61563e+01  3.09958e-01
+    1.26115e+01  -1.74509e+01  5.39023e-01
+    1.28992e+01  -1.83162e+01  8.29195e-01
+    1.31224e+01  -1.89430e+01  8.51437e-01
+    1.33047e+01  -1.94205e+01  1.45213e+00
+    1.35924e+01  -2.01011e+01  0.00000e+00
+Scatter
+    4.60517e+00  -9.22980e-01  0.00000e+00  -7.46991e+00  0.00000e+00
+    4.82831e+00  -9.24334e-01  0.00000e+00  -7.02490e+00  0.00000e+00
+    5.01064e+00  -9.25389e-01  0.00000e+00  -6.66188e+00  0.00000e+00
+    5.16479e+00  -9.26747e-01  0.00000e+00  -6.35481e+00  0.00000e+00
+    5.29832e+00  -9.28106e-01  0.00000e+00  -6.08897e+00  0.00000e+00
+    5.52146e+00  -9.32044e-01  0.00000e+00  -5.64635e+00  0.00000e+00
+    5.70378e+00  -9.35388e-01  0.00000e+00  -5.28484e+00  0.00000e+00
+    5.85793e+00  -9.40731e-01  0.00000e+00  -4.98180e+00  0.00000e+00
+    5.99146e+00  -9.45333e-01  0.00000e+00  -4.71897e+00  0.00000e+00
+    6.10925e+00  -9.52123e-01  0.00000e+00  -4.48957e+00  0.00000e+00
+    6.21461e+00  -9.58023e-01  0.00000e+00  -4.28432e+00  0.00000e+00
+    6.30992e+00  -9.66155e-01  0.00000e+00  -4.10070e+00  0.00000e+00
+    6.39693e+00  -9.73403e-01  0.00000e+00  -3.93337e+00  0.00000e+00
+    6.47697e+00  -9.84056e-01  0.00000e+00  -3.78297e+00  0.00000e+00
+    6.55108e+00  -9.93855e-01  0.00000e+00  -3.64356e+00  0.00000e+00
+    6.68461e+00  -1.01161e+00  0.00000e+00  -3.39255e+00  0.00000e+00
+    6.90776e+00  -1.05888e+00  0.00000e+00  -2.98910e+00  0.00000e+00
+    6.90776e+00  -1.05888e+00  0.00000e+00  -2.98910e+00  0.00000e+00
+    7.31322e+00  -1.21116e+00  -9.53038e-01  -2.31682e+00  -8.52398e-01
+    7.60090e+00  -1.39666e+00  -1.02223e+00  -1.91015e+00  -9.89828e-01
+    8.00637e+00  -1.80092e+00  -1.04100e+00  -1.47682e+00  -1.11514e+00
+    8.29405e+00  -2.18579e+00  -6.51268e-01  -1.27537e+00  -9.15388e-01
+    8.51719e+00  -2.52418e+00  -4.78596e-01  -1.17144e+00  -6.77590e-01
+    8.69951e+00  -2.81880e+00  -3.47275e-01  -1.11230e+00  -5.18382e-01
+    8.98720e+00  -3.30764e+00  -2.99812e-01  -1.05287e+00  -3.32667e-01
+    9.21034e+00  -3.70409e+00  -2.60774e-01  -1.02700e+00  -2.47686e-01
+    9.61581e+00  -4.45595e+00  -1.75908e-01  -1.01013e+00  -1.48004e-01
+    9.90349e+00  -5.00775e+00  -1.14681e-01  -1.01457e+00  -1.27669e-01
+    1.03090e+01  -5.80101e+00  -5.03106e-02  -1.03859e+00  -1.06640e-01
+    1.05966e+01  -6.36985e+00  -3.21807e-02  -1.06683e+00  -1.18707e-01
+    1.08198e+01  -6.81300e+00  -1.94807e-02  -1.09537e+00  -1.16993e-01
+    1.10021e+01  -7.17591e+00  -2.27060e-02  -1.12308e+00  -1.29161e-01
+    1.12898e+01  -7.74974e+00  -1.60753e-03  -1.17550e+00  -1.33243e-01
+    1.15129e+01  -8.19517e+00  -2.67755e-03  -1.22368e+00  -1.30043e-01
+    1.19184e+01  -9.00508e+00  -1.01487e-02  -1.32807e+00  -1.38179e-01
+    1.22061e+01  -9.58039e+00  3.80873e-03  -1.41543e+00  -1.14607e-01
+    1.26115e+01  -1.03911e+01  -1.67096e-07  -1.55488e+00  -1.06011e-01
+    1.28992e+01  -1.09663e+01  -9.77050e-03  -1.66450e+00  -1.01077e-01
+    1.31224e+01  -1.14128e+01  1.90333e-02  -1.75530e+00  -9.75066e-02
+    1.33047e+01  -1.17772e+01  -1.46646e-02  -1.83327e+00  -1.24270e-01
+    1.35924e+01  -1.23527e+01  0.00000e+00  -1.96276e+00  0.00000e+00
+EndElement
