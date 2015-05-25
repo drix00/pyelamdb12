@@ -1,0 +1,3 @@
+syntax: glob
+dist/
+pyElamDB12.egg-info/
